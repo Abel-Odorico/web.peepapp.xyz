@@ -1,0 +1,99 @@
+# ====================================================================
+# VERSÃO V200 - RAGNAROK ULTIMATE PROTECT (MÁXIMA 2026)
+# BYPASS TOTAL: CHROME, EDGE, FIREFOX, SAFARI, OPERA GX & SMART TVs
+# FOCO: COMUNICAÇÃO DNS INSTANTÂNEA E DESBLOQUEIO DE CONTEÚDO MISTO
+# ====================================================================
+
+RewriteEngine On
+
+# 1. QUEBRA DE PROTOCOLO (O SEGREDO DO V200)
+# Engana o motor de segurança do navegador fazendo-o ignorar a origem do stream
+<IfModule mod_headers.c>
+    # Permite upgrade mas NÃO bloqueia se o certificado falhar (essencial para DNS IPTV)
+    Header always set Content-Security-Policy "upgrade-insecure-requests;"
+    
+    # Bypass de CORS de Nível Militar (Liberação Total)
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS, HEAD, PUT"
+    Header set Access-Control-Allow-Headers "Origin, Range, X-Requested-With, Content-Type, Accept, Authorization, X-Playback-Session-Id"
+    Header set Access-Control-Expose-Headers "Content-Length, Content-Range, Date, Server, Transfer-Encoding, X-Cache, X-Request-ID"
+    
+    # Força o Navegador a liberar o uso de GPU e Autoplay sem restrição
+    Header set Permissions-Policy "accelerometer=(self), autoplay=(self), fullscreen=(self), gyroscope=(self), magnetometer=(self), microphone=()"
+    
+    # Desativa o bloqueio de renderização por "MIME-Type" incorreto
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>
+
+# 2. ESCUDO DE PROTOCOLO (ANTI-SSL INTERCEPTION)
+# Se o site tentar carregar em HTTPS, ele mata o sinal HTTP dos canais. 
+# Esta regra blinda o ambiente para rodar em HTTP estável.
+RewriteCond %{HTTPS} on
+RewriteRule ^(.*)$ http://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# 3. OTIMIZAÇÃO DE BUFFER V200 (LATÊNCIA ZERO)
+# Mantém os slots de conexão abertos para que o canal abra instantaneamente
+<IfModule mod_headers.c>
+    Header set Connection "keep-alive"
+    Header set Keep-Alive "timeout=30, max=2000"
+    # Impede o navegador de "economizar" banda no PC (PC Boost)
+    Header set X-Accel-Buffering "no"
+</IfModule>
+
+# 4. BLINDAGEM CONTRA BOT-DUMPERS & SNIFFERS
+# Protege sua DNS de ser capturada por ferramentas de inspeção
+SetEnvIfNoCase User-Agent "(java|curl|python|wget|libwww-perl|go-http-client|sqlmap|nmap|scan|acunetix|mj12bot|ahrefsbot|dotbot|rogue|checker|headless|puppeteer|selenium)" bad_bot
+Order Allow,Deny
+Allow from all
+Deny from env=bad_bot
+
+# 5. REGRAS DE PERFORMANCE TITAN (PHP 8.x +)
+# Preparado para processar JSON de 100MB+ instantaneamente no PC
+<IfModule mod_php7.c>
+    php_value memory_limit 4096M
+    php_value max_execution_time 0
+    php_value max_input_time -1
+    php_value post_max_size 1024M
+    php_value upload_max_filesize 1024M
+    php_value max_input_vars 50000
+    php_value output_buffering On
+</IfModule>
+
+# 6. BYPASS DE MOD_SECURITY & FIREWALL DE HOSPEDAGEM
+# Evita que a hospedagem ache que a carga de dados do IPTV é um ataque
+<IfModule mod_security.c>
+    SecRuleEngine Off
+    SecFilterScanPost Off
+    SecRequestBodyAccess Off
+</IfModule>
+
+# 7. COMPRESSÃO DE SITE (IGNORA VÍDEO PARA NÃO DAR LAG)
+# Se comprimir o .ts ou .m3u8, o vídeo trava no PC. O V200 resolve isso.
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json
+    SetEnvIfNoCase Request_URI \.(?:m3u8|ts|mp4|mpd|mkv|avi|flv)$ no-gzip dont-vary
+</IfModule>
+
+# 8. SISTEMA DE COFRE (BLOCK DE ACESSO EXTERNO)
+Options -Indexes -MultiViews
+<FilesMatch "^(config\.php|session\.php|functions\.php|db\.php|ajax-control\.php|epgdata\.php|\.htaccess|\.env|\.migration_key)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# 9. PROTEÇÃO DO SISTEMA DE MIGRATIONS
+<FilesMatch "^migration\.log$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# 9. PERSISTÊNCIA DE CONEXÃO (CANAIS SEM QUEDA)
+# Define o tempo de resposta como "Infinito" para transmissões ao vivo
+TimeOut 86400
+ProxyTimeout 86400
+LimitRequestBody 0
+
+# 10. TRATAMENTO DE ERROS (SILENT RECOVERY)
+# Se o canal der erro, ele redireciona internamente sem mostrar erro ao usuário
+ErrorDocument 404 /index.php
+ErrorDocument 500 /index.php

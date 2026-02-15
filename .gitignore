@@ -1,0 +1,39 @@
+# ====================================
+# WEB PLAYER - .gitignore
+# ====================================
+
+# Banco de dados SQLite (NUNCA versionar)
+api/.db.db
+api/adb.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Arquivos de configuração local sensíveis
+api/config.php
+api/.migration_key
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+*.log
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Temporários
+tmp/
+temp/
+cache/
+
+# Migrations já aplicadas (tracking local)
+api/migrations/.applied
+
+# Backups locais
+*.bak
+*.backup

@@ -1,0 +1,84 @@
+# ================================================
+# AUTO DEPLOY - WEB PLAYER
+# Deploy automático via FTP + Auto Migrations
+# ================================================
+name: 🚀 Auto Deploy & Migrate
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Permite execução manual
+
+# Evita deploys simultâneos
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: 📦 Deploy via FTP
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔄 Sincronizar via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 21
+          protocol: ftp
+          local-dir: ./
+          server-dir: /
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/api/.db.db
+            **/api/adb.db
+            **/api/config.php
+            **/.DS_Store
+            **/*.md
+            **/.gitignore
+
+      - name: 🗃️ Executar Auto Migrations
+        run: |
+          echo "⏳ Aguardando servidor estabilizar após deploy..."
+          sleep 10
+          
+          echo "🔄 Executando migrations..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            -H "X-Migration-Key: ${{ secrets.MIGRATION_SECRET }}" \
+            "https://web.peepapp.xyz/api/migrate.php")
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          
+          echo "📋 Resposta (HTTP $HTTP_CODE):"
+          echo "$BODY"
+          
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "⚠️ Migration retornou HTTP $HTTP_CODE"
+            echo "Corpo: $BODY"
+            # Não falha o deploy por causa de migrations
+            # pois o banco pode já estar atualizado
+          else
+            echo "✅ Migrations executadas com sucesso!"
+          fi
+
+      - name: 📊 Resumo do Deploy
+        run: |
+          echo "## 🚀 Deploy Concluído!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Site:** https://web.peepapp.xyz" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Data:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Autor:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
