@@ -22,7 +22,7 @@ jobs:
 
       - name: 🚀 Deploy via LFTP (Debug Mode)
         env:
-          FTP_USER: webpeepapp@web.peepapp.xyz
+          FTP_USER: webstreaming@web.peepapp.xyz
           FTP_PASS: 'PeepTV10203040*'
           FTP_HOST: 103.204.193.146
         run: |
