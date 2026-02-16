@@ -36,43 +36,16 @@ jobs:
           FTP_USER: ${{ secrets.FTP_USERNAME }}
           FTP_PASS: ${{ secrets.FTP_PASSWORD }}
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq lftp > /dev/null 2>&1
+          sudo apt-get update -qq && sudo apt-get install -y -qq git-ftp > /dev/null 2>&1
 
-          # Criar script lftp com credenciais via printf (protege caracteres especiais)
-          cat > /tmp/ftp_deploy.lftp << LFTP_SCRIPT
-          set ftp:ssl-allow yes
-          set ftp:ssl-force no
-          set ssl:verify-certificate no
-          set ftp:passive-mode yes
-          set net:timeout 30
-          set net:max-retries 3
-          set net:reconnect-interval-base 5
-          LFTP_SCRIPT
+          # Configurar git-ftp
+          git config git-ftp.url "ftp://${FTP_HOST}"
+          git config git-ftp.user "${FTP_USER}"
+          git config git-ftp.password "${FTP_PASS}"
+          git config git-ftp.insecure 1
 
-          # Adicionar credenciais ao script de forma segura
-          printf 'open -u "%s","%s" ftp://%s\n' "$FTP_USER" "$FTP_PASS" "$FTP_HOST" >> /tmp/ftp_deploy.lftp
-          
-          cat >> /tmp/ftp_deploy.lftp << 'LFTP_MIRROR'
-          mirror --reverse --delete --verbose \
-            --exclude-glob .git/ \
-            --exclude-glob .git* \
-            --exclude-glob .github/ \
-            --exclude-glob api/.db.db \
-            --exclude-glob api/adb.db \
-            --exclude-glob api/config.php \
-            --exclude-glob .DS_Store \
-            --exclude-glob *.md \
-            --exclude-glob .gitignore \
-            --exclude-glob setup_secrets.py \
-            ./ /
-          quit
-          LFTP_MIRROR
-
-          # Executar
-          lftp -f /tmp/ftp_deploy.lftp
-          
-          # Limpar
-          rm -f /tmp/ftp_deploy.lftp
+          # Tentar push incremental, fallback para init se for primeiro deploy
+          git ftp push --all --verbose || git ftp init --verbose
 
       - name: 🗃️ Executar Auto Migrations
         run: |
