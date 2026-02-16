@@ -31,26 +31,32 @@ jobs:
           echo "${{ secrets.MIGRATION_SECRET }}" > api/.migration_key
 
       - name: 🔄 Sincronizar via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: 21
-          protocol: ftp
-          local-dir: ./
-          server-dir: /
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/.github/**
-            **/api/.db.db
-            **/api/adb.db
-            **/api/config.php
-            **/.DS_Store
-            **/*.md
-            **/.gitignore
-            **/setup_secrets.py
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq lftp > /dev/null 2>&1
+          
+          lftp -e "
+            set ftp:ssl-allow yes;
+            set ftp:ssl-force no;
+            set ssl:verify-certificate no;
+            set ftp:passive-mode yes;
+            set net:timeout 30;
+            set net:max-retries 3;
+            set net:reconnect-interval-base 5;
+            open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ftp://${{ secrets.FTP_SERVER }};
+            mirror --reverse --delete --verbose \
+              --exclude-glob .git/ \
+              --exclude-glob .git* \
+              --exclude-glob .github/ \
+              --exclude-glob api/.db.db \
+              --exclude-glob api/adb.db \
+              --exclude-glob api/config.php \
+              --exclude-glob .DS_Store \
+              --exclude-glob *.md \
+              --exclude-glob .gitignore \
+              --exclude-glob setup_secrets.py \
+              ./ /;
+            quit;
+          "
 
       - name: 🗃️ Executar Auto Migrations
         run: |
