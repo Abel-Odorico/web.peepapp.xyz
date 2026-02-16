@@ -17,10 +17,11 @@ jobs:
       - name: 📂 Sync files (Exclude Database)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
-          server: ftp.peepapp.xyz
+          server: 103.204.193.146
           username: webpeepapp@web.peepapp.xyz
           password: 'PeepTV10203040*'
           port: 21
+          protocol: ftp
           security: loose # Relaxed security to allow self-signed certs or mismatches
           exclude: |
             **/.git*
