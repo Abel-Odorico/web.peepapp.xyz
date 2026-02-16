@@ -14,23 +14,18 @@ jobs:
       - name: 🚚 Get latest code
         uses: actions/checkout@v4
 
-      - name: 📂 Sync files (Exclude Database)
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-        with:
-          server: 103.204.193.146
-          username: webpeepapp@web.peepapp.xyz
-          password: 'PeepTV10203040*'
-          port: 21
-          protocol: ftp
-          security: loose # Relaxed security to allow self-signed certs or mismatches
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            **/api/.db.db
-            **/api/api/.db.db
-            **/README.md
-            **/.env*
+      - name: 📦 Install LFTP
+        run: sudo apt-get install -y lftp
+
+      - name: 🚀 Deploy via LFTP
+        run: |
+          lftp -c "
+          set ftp:ssl-allow yes;
+          set ssl:verify-certificate no;
+          open -u 'webpeepapp@web.peepapp.xyz','PeepTV10203040*' 103.204.193.146;
+          mirror --reverse --verbose --delete --parallel=5 --exclude-glob .git/ --exclude-glob api/.db.db --exclude-glob api/api/.db.db --exclude-glob .env --exclude-glob README.md ./ /;
+          quit
+          "
             
       - name: 🔄 Run Automigrations
         run: |
