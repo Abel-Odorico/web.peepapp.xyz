@@ -18,11 +18,14 @@ jobs:
         run: sudo apt-get install -y lftp
 
       - name: 🚀 Deploy via LFTP
+        env:
+          FTP_USER: webpeepapp@web.peepapp.xyz
+          FTP_PASS: 'PeepTV10203040*'
+          FTP_HOST: 103.204.193.146
         run: |
           lftp -c "
-          set ftp:ssl-allow yes;
-          set ssl:verify-certificate no;
-          open -u 'webpeepapp@web.peepapp.xyz','PeepTV10203040*' 103.204.193.146;
+          set ftp:ssl-allow no;
+          open -u '$FTP_USER','$FTP_PASS' $FTP_HOST;
           mirror --reverse --verbose --delete --parallel=5 --exclude-glob .git/ --exclude-glob api/.db.db --exclude-glob api/api/.db.db --exclude-glob .env --exclude-glob README.md ./ /;
           quit
           "
