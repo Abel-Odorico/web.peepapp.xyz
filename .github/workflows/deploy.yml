@@ -31,8 +31,16 @@ jobs:
           echo "${{ secrets.MIGRATION_SECRET }}" > api/.migration_key
 
       - name: 🔄 Sincronizar via FTP
+        env:
+          FTP_HOST: ${{ secrets.FTP_SERVER }}
+          FTP_USER: ${{ secrets.FTP_USERNAME }}
+          FTP_PASS: ${{ secrets.FTP_PASSWORD }}
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq lftp > /dev/null 2>&1
+
+          # Criar arquivo netrc para autenticação segura (evita problemas com caracteres especiais)
+          echo "machine ${FTP_HOST} login ${FTP_USER} password ${FTP_PASS}" > ~/.netrc
+          chmod 600 ~/.netrc
           
           lftp -e "
             set ftp:ssl-allow yes;
@@ -42,7 +50,7 @@ jobs:
             set net:timeout 30;
             set net:max-retries 3;
             set net:reconnect-interval-base 5;
-            open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ftp://${{ secrets.FTP_SERVER }};
+            open ftp://${FTP_HOST};
             mirror --reverse --delete --verbose \
               --exclude-glob .git/ \
               --exclude-glob .git* \
@@ -57,6 +65,9 @@ jobs:
               ./ /;
             quit;
           "
+          
+          # Limpar credenciais
+          rm -f ~/.netrc
 
       - name: 🗃️ Executar Auto Migrations
         run: |
