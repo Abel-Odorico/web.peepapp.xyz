@@ -1,58 +1,61 @@
 # ================================================
 # AUTO DEPLOY - WEB PLAYER
-# Deploy automático via FTP + Auto Migrations
+# Deploy automático via FTPS + Auto Migrations
 # ================================================
-name: 🚀 Auto Deploy & Migrate
+name: Auto Deploy
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch: # Permite execução manual
+  workflow_dispatch:
 
-# Evita deploys simultâneos
 concurrency:
   group: deploy-production
   cancel-in-progress: false
 
 jobs:
   deploy:
-    name: 📦 Deploy via FTP
+    name: Deploy via FTPS
     runs-on: ubuntu-latest
     
     steps:
-      - name: 📥 Checkout código
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 🔑 Criar arquivo de chave de migration
+      - name: Criar arquivo de chave de migration
         run: |
           echo "${{ secrets.MIGRATION_SECRET }}" > api/.migration_key
+          echo "${{ secrets.DEPLOY_SECRET }}" > api/.deploy_key
 
-      - name: 🔄 Sincronizar via FTP
-        env:
-          FTP_HOST: ${{ secrets.FTP_SERVER }}
-          FTP_USER: ${{ secrets.FTP_USERNAME }}
-          FTP_PASS: ${{ secrets.FTP_PASSWORD }}
+      - name: Sincronizar via FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 21
+          protocol: ftps
+          local-dir: ./
+          server-dir: /
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/api/.db.db
+            **/api/adb.db
+            **/api/config.php
+            **/.DS_Store
+            **/.gitignore
+
+      - name: Executar Auto Migrations
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq git-ftp > /dev/null 2>&1
-
-          # Configurar git-ftp
-          git config git-ftp.url "ftp://${FTP_HOST}"
-          git config git-ftp.user "${FTP_USER}"
-          git config git-ftp.password "${FTP_PASS}"
-          git config git-ftp.insecure 1
-
-          # Tentar push incremental, fallback para init se for primeiro deploy
-          git ftp push --all --verbose || git ftp init --verbose
-
-      - name: 🗃️ Executar Auto Migrations
-        run: |
-          echo "⏳ Aguardando servidor estabilizar após deploy..."
+          echo "Aguardando servidor estabilizar..."
           sleep 10
           
-          echo "🔄 Executando migrations..."
+          echo "Executando migrations..."
           RESPONSE=$(curl -s -w "\n%{http_code}" \
             -X POST \
             -H "X-Migration-Key: ${{ secrets.MIGRATION_SECRET }}" \
@@ -61,21 +64,18 @@ jobs:
           HTTP_CODE=$(echo "$RESPONSE" | tail -1)
           BODY=$(echo "$RESPONSE" | head -n -1)
           
-          echo "📋 Resposta (HTTP $HTTP_CODE):"
+          echo "Resposta (HTTP $HTTP_CODE):"
           echo "$BODY"
           
           if [ "$HTTP_CODE" -ne 200 ]; then
-            echo "⚠️ Migration retornou HTTP $HTTP_CODE"
-            echo "Corpo: $BODY"
-            # Não falha o deploy por causa de migrations
-            # pois o banco pode já estar atualizado
+            echo "Migration retornou HTTP $HTTP_CODE"
           else
-            echo "✅ Migrations executadas com sucesso!"
+            echo "Migrations executadas com sucesso!"
           fi
 
-      - name: 📊 Resumo do Deploy
+      - name: Resumo do Deploy
         run: |
-          echo "## 🚀 Deploy Concluído!" >> $GITHUB_STEP_SUMMARY
+          echo "## Deploy Concluido!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Site:** https://web.peepapp.xyz" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY

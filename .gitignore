@@ -12,6 +12,8 @@ api/adb.db
 # Arquivos de configuração local sensíveis
 api/config.php
 api/.migration_key
+api/.deploy_key
+api/deploy.log
 
 # Arquivos de sistema
 .DS_Store
