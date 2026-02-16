@@ -21,7 +21,7 @@ jobs:
           username: webpeepapp@web.peepapp.xyz
           password: 'PeepTV10203040*'
           port: 21
-          security: strict # Default is strict for FTPS if supported.
+          security: loose # Relaxed security to allow self-signed certs or mismatches
           exclude: |
             **/.git*
             **/.git*/**
