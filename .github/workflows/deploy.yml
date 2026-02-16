@@ -17,15 +17,34 @@ jobs:
       - name: 📦 Install LFTP
         run: sudo apt-get install -y lftp
 
-      - name: 🚀 Deploy via LFTP
+      - name: 🔍 Check Runner IP (For Whitelisting)
+        run: curl http://ifconfig.me
+
+      - name: 🚀 Deploy via LFTP (Debug Mode)
         env:
           FTP_USER: webpeepapp@web.peepapp.xyz
           FTP_PASS: 'PeepTV10203040*'
           FTP_HOST: 103.204.193.146
         run: |
+          # Create credentials file to avoid shell escaping issues
+          echo "machine $FTP_HOST login $FTP_USER password $FTP_PASS" > ~/.netrc
+          chmod 600 ~/.netrc
+          
+          echo "Testing connection and listing files..."
           lftp -c "
-          set ftp:ssl-allow no;
-          open -u '$FTP_USER','$FTP_PASS' $FTP_HOST;
+          set dns:order 'inet';
+          set ftp:ssl-allow yes;
+          set ssl:verify-certificate no;
+          open $FTP_HOST;
+          ls;
+          " || { echo "❌ Login Failed! Check if IP is blocked or Creds are wrong."; exit 1; }
+
+          echo "✅ Connection Success! Starting Mirror..."
+          lftp -c "
+          set dns:order 'inet';
+          set ftp:ssl-allow yes;
+          set ssl:verify-certificate no;
+          open $FTP_HOST;
           mirror --reverse --verbose --delete --parallel=5 --exclude-glob .git/ --exclude-glob api/.db.db --exclude-glob api/api/.db.db --exclude-glob .env --exclude-glob README.md ./ /;
           quit
           "
