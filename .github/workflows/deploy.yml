@@ -38,36 +38,41 @@ jobs:
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq lftp > /dev/null 2>&1
 
-          # Criar arquivo netrc para autenticação segura (evita problemas com caracteres especiais)
-          echo "machine ${FTP_HOST} login ${FTP_USER} password ${FTP_PASS}" > ~/.netrc
-          chmod 600 ~/.netrc
+          # Criar script lftp com credenciais via printf (protege caracteres especiais)
+          cat > /tmp/ftp_deploy.lftp << LFTP_SCRIPT
+          set ftp:ssl-allow yes
+          set ftp:ssl-force no
+          set ssl:verify-certificate no
+          set ftp:passive-mode yes
+          set net:timeout 30
+          set net:max-retries 3
+          set net:reconnect-interval-base 5
+          LFTP_SCRIPT
+
+          # Adicionar credenciais ao script de forma segura
+          printf 'open -u "%s","%s" ftp://%s\n' "$FTP_USER" "$FTP_PASS" "$FTP_HOST" >> /tmp/ftp_deploy.lftp
           
-          lftp -e "
-            set ftp:ssl-allow yes;
-            set ftp:ssl-force no;
-            set ssl:verify-certificate no;
-            set ftp:passive-mode yes;
-            set net:timeout 30;
-            set net:max-retries 3;
-            set net:reconnect-interval-base 5;
-            open ftp://${FTP_HOST};
-            mirror --reverse --delete --verbose \
-              --exclude-glob .git/ \
-              --exclude-glob .git* \
-              --exclude-glob .github/ \
-              --exclude-glob api/.db.db \
-              --exclude-glob api/adb.db \
-              --exclude-glob api/config.php \
-              --exclude-glob .DS_Store \
-              --exclude-glob *.md \
-              --exclude-glob .gitignore \
-              --exclude-glob setup_secrets.py \
-              ./ /;
-            quit;
-          "
+          cat >> /tmp/ftp_deploy.lftp << 'LFTP_MIRROR'
+          mirror --reverse --delete --verbose \
+            --exclude-glob .git/ \
+            --exclude-glob .git* \
+            --exclude-glob .github/ \
+            --exclude-glob api/.db.db \
+            --exclude-glob api/adb.db \
+            --exclude-glob api/config.php \
+            --exclude-glob .DS_Store \
+            --exclude-glob *.md \
+            --exclude-glob .gitignore \
+            --exclude-glob setup_secrets.py \
+            ./ /
+          quit
+          LFTP_MIRROR
+
+          # Executar
+          lftp -f /tmp/ftp_deploy.lftp
           
-          # Limpar credenciais
-          rm -f ~/.netrc
+          # Limpar
+          rm -f /tmp/ftp_deploy.lftp
 
       - name: 🗃️ Executar Auto Migrations
         run: |
