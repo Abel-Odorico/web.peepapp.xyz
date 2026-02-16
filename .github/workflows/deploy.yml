@@ -1,0 +1,39 @@
+name: Deploy PeepApp Web
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  web-deploy:
+    name: Deploy to FTP
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚚 Get latest code
+        uses: actions/checkout@v4
+
+      - name: 📂 Sync files (Exclude Database)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ftp.peepapp.xyz
+          username: webpeepapp@web.peepapp.xyz
+          password: 'PeepTV10203040*'
+          port: 21
+          security: strict # Default is strict for FTPS if supported.
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/api/.db.db
+            **/api/api/.db.db
+            **/README.md
+            **/.env*
+            
+      - name: 🔄 Run Automigrations
+        run: |
+          echo "Triggering Migrations..."
+          curl -H "Cache-Control: no-cache" \
+               -X GET "https://web.peepapp.xyz/run_migrations.php?token=PeepAppSecretMigrationToken2026" \
+               --fail-with-body
