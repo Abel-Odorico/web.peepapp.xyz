@@ -26,6 +26,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: 🔑 Criar arquivo de chave de migration
+        run: |
+          echo "${{ secrets.MIGRATION_SECRET }}" > api/.migration_key
+
       - name: 🔄 Sincronizar via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -46,6 +50,7 @@ jobs:
             **/.DS_Store
             **/*.md
             **/.gitignore
+            **/setup_secrets.py
 
       - name: 🗃️ Executar Auto Migrations
         run: |
